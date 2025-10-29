@@ -1,0 +1,501 @@
+<img src="https://r2cdn.perplexity.ai/pplx-full-logo-primary-dark%402x.png" style="height:64px;margin-right:32px"/>
+
+## Complete VS Code Agent Setup Prompt for YouAndINotAI Growth System
+
+```
+Create a complete automated growth system for the YouAndINotAI dating app with full production deployment to youandinotai.com and youandinotai.online domains.
+
+═══════════════════════════════════════════════════════════════════════════
+DOMAIN CONFIGURATION
+═══════════════════════════════════════════════════════════════════════════
+
+PRIMARY DOMAIN: youandinotai.com
+SECONDARY DOMAIN: youandinotai.online (redirect to primary)
+
+CLOUDFLARE DNS SETUP:
+1. Point youandinotai.com A record to server IP
+2. Point www.youandinotai.com CNAME to youandinotai.com
+3. Set youandinotai.online to redirect (301) to youandinotai.com
+4. Enable SSL/TLS Full (strict) mode
+5. Enable Always Use HTTPS
+6. Enable HTTP/2 and HTTP/3
+7. Configure Page Rules:
+   - youandinotai.online/* → https://youandinotai.com/$1 (301 redirect)
+   - www.youandinotai.com/* → https://youandinotai.com/$1 (301 redirect)
+
+NGINX CONFIGURATION (if self-hosting):
+```
+
+
+# Redirect youandinotai.online to youandinotai.com
+
+server {
+listen 80;
+listen 443 ssl http2;
+server_name youandinotai.online www.youandinotai.online;
+
+    ssl_certificate /etc/letsencrypt/live/youandinotai.online/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/youandinotai.online/privkey.pem;
+    
+    return 301 https://youandinotai.com$request_uri;
+    }
+
+# Main site
+
+server {
+listen 80;
+server_name youandinotai.com www.youandinotai.com;
+return 301 https://youandinotai.com\$request_uri;
+}
+
+server {
+listen 443 ssl http2;
+server_name www.youandinotai.com;
+
+    ssl_certificate /etc/letsencrypt/live/youandinotai.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/youandinotai.com/privkey.pem;
+    
+    return 301 https://youandinotai.com$request_uri;
+    }
+
+server {
+listen 443 ssl http2;
+server_name youandinotai.com;
+
+    ssl_certificate /etc/letsencrypt/live/youandinotai.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/youandinotai.com/privkey.pem;
+    
+    root /var/www/youandinotai/dist/client;
+    index index.html;
+    
+    # API proxy
+    location /api {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+    
+    # tRPC endpoint
+    location /trpc {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+    
+    # Frontend SPA
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+    }
+
+```
+
+═══════════════════════════════════════════════════════════════════════════
+PROJECT STRUCTURE
+═══════════════════════════════════════════════════════════════════════════
+
+youandinotai_growth/
+├── client/                          # React frontend
+│   ├── public/
+│   │   ├── logo.png
+│   │   ├── og-image.png
+│   │   └── favicon.ico
+│   ├── src/
+│   │   ├── pages/
+│   │   │   └── Waitlist.tsx        # Main landing page
+│   │   ├── components/
+│   │   │   ├── Hero.tsx
+│   │   │   ├── WaitlistForm.tsx
+│   │   │   ├── ReferralCard.tsx
+│   │   │   ├── Features.tsx
+│   │   │   ├── HowItWorks.tsx
+│   │   │   └── Footer.tsx
+│   │   ├── lib/
+│   │   │   └── trpc.ts             # tRPC client setup
+│   │   ├── hooks/
+│   │   │   └── useWaitlist.ts
+│   │   ├── App.tsx
+│   │   ├── main.tsx
+│   │   └── index.css
+│   ├── index.html
+│   ├── vite.config.ts
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   └── tsconfig.json
+├── server/                          # Express + tRPC backend
+│   ├── index.ts                    # Main server file
+│   ├── trpc.ts                     # tRPC initialization
+│   ├── routers/
+│   │   ├── waitlist.ts             # Waitlist procedures
+│   │   └── index.ts                # Router aggregator
+│   ├── automation/
+│   │   ├── twitter-content.ts      # 30 tweets library
+│   │   ├── twitter-bot.ts          # Twitter automation
+│   │   ├── tiktok-content.ts       # 30 TikTok scripts
+│   │   ├── reddit-automation.ts    # Reddit posting
+│   │   ├── email-campaigns.ts      # 5-email drip campaign
+│   │   ├── scheduler.ts            # Cron job orchestrator
+│   │   └── press-kit.md            # Journalist press kit
+│   ├── lib/
+│   │   ├── db.ts                   # Database queries
+│   │   ├── stripe.ts               # Stripe integration
+│   │   ├── email.ts                # Email service
+│   │   └── analytics.ts            # Analytics tracking
+│   └── types/
+│       └── index.ts                # TypeScript types
+├── drizzle/
+│   ├── schema.ts                   # Database schema
+│   ├── migrations/                 # Migration files
+│   └── seed.ts                     # Seed data
+├── scripts/
+│   ├── deploy.sh                   # Production deployment
+│   ├── setup-domains.sh            # Domain configuration
+│   ├── backup-db.sh                # Database backup
+│   └── ssl-renew.sh                # SSL certificate renewal
+├── .env.local                      # Development environment
+├── .env.production                 # Production environment
+├── package.json
+├── tsconfig.json
+├── drizzle.config.ts
+├── ecosystem.config.js             # PM2 process manager
+└── README.md
+
+═══════════════════════════════════════════════════════════════════════════
+TECHNOLOGY STACK
+═══════════════════════════════════════════════════════════════════════════
+
+FRONTEND:
+- React 18.3+ with TypeScript 5.6+
+- Vite 5.4+ (build tool)
+- TailwindCSS 3.4+ (styling)
+- tRPC 11+ client
+- @tanstack/react-query 5+ (data fetching)
+
+BACKEND:
+- Node.js 20+ LTS
+- Express 4.19+
+- tRPC 11+ server
+- TypeScript 5.6+
+
+DATABASE:
+- PostgreSQL 16+ (production)
+- Drizzle ORM 0.33+
+- Connection pooling with pg-pool
+
+PAYMENTS:
+- Stripe Checkout API (latest)
+- Webhook handling for payment verification
+
+EMAIL:
+- Resend API (preferred) OR SendGrid
+- HTML email templates
+- Open/click tracking
+
+AUTOMATION:
+- node-cron 3.0+ (job scheduling)
+- twitter-api-v2 1.17+ (Twitter/X posting)
+- snoowrap 2.0+ (Reddit API)
+
+HOSTING:
+- Primary: youandinotai.com
+- Redirect: youandinotai.online → youandinotai.com
+- SSL: Let's Encrypt (auto-renewal)
+- Process Manager: PM2
+- Reverse Proxy: Nginx OR Cloudflare Tunnel
+
+MONITORING:
+- PM2 monitoring dashboard
+- PostgreSQL query logging
+- Custom analytics dashboard
+- Error tracking with console logs
+
+═══════════════════════════════════════════════════════════════════════════
+DATABASE SCHEMA (Drizzle ORM)
+═══════════════════════════════════════════════════════════════════════════
+
+FILE: drizzle/schema.ts
+
+```
+
+import { pgTable, serial, text, integer, boolean, timestamp, index } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+
+// Waitlist entries table
+export const waitlistEntries = pgTable('waitlist_entries', {
+id: serial('id').primaryKey(),
+email: text('email').notNull().unique(),
+firstName: text('first_name'),
+referralCode: text('referral_code').notNull().unique(),
+referredBy: text('referred_by'),
+referralCount: integer('referral_count').default(0).notNull(),
+hasSkippedLine: boolean('has_skipped_line').default(false).notNull(),
+isPremium: boolean('is_premium').default(false).notNull(),
+stripeCustomerId: text('stripe_customer_id'),
+stripeSessionId: text('stripe_session_id'),
+source: text('source').default('landing').notNull(), // 'landing', 'twitter', 'tiktok', 'reddit'
+position: integer('position').notNull(),
+verified: boolean('verified').default(true).notNull(),
+createdAt: timestamp('created_at').defaultNow().notNull(),
+updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => {
+return {
+emailIdx: index('email_idx').on(table.email),
+referralCodeIdx: index('referral_code_idx').on(table.referralCode),
+referredByIdx: index('referred_by_idx').on(table.referredBy),
+};
+});
+
+// Referrals tracking table
+export const referrals = pgTable('referrals', {
+id: serial('id').primaryKey(),
+referrerCode: text('referrer_code').notNull(),
+refereeEmail: text('referee_email').notNull(),
+status: text('status').default('pending').notNull(), // 'pending', 'completed', 'expired'
+createdAt: timestamp('created_at').defaultNow().notNull(),
+completedAt: timestamp('completed_at'),
+}, (table) => {
+return {
+referrerCodeIdx: index('referrer_code_idx').on(table.referrerCode),
+};
+});
+
+// Email campaigns table
+export const emailCampaigns = pgTable('email_campaigns', {
+id: serial('id').primaryKey(),
+email: text('email').notNull(),
+campaignType: text('campaign_type').notNull(), // 'welcome', 'day3', 'day7', 'day14', 'day21'
+emailNumber: integer('email_number').notNull(), // 1-5
+sentAt: timestamp('sent_at'),
+openedAt: timestamp('opened_at'),
+clickedAt: timestamp('clicked_at'),
+createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => {
+return {
+emailIdx: index('email_campaigns_email_idx').on(table.email),
+campaignTypeIdx: index('campaign_type_idx').on(table.campaignType),
+};
+});
+
+// Social media posts tracking
+export const socialPosts = pgTable('social_posts', {
+id: serial('id').primaryKey(),
+platform: text('platform').notNull(), // 'twitter', 'tiktok', 'reddit'
+postId: text('post_id'),
+content: text('content').notNull(),
+url: text('url'),
+likes: integer('likes').default(0),
+shares: integer('shares').default(0),
+comments: integer('comments').default(0),
+clicks: integer('clicks').default(0),
+postedAt: timestamp('posted_at').defaultNow().notNull(),
+createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => {
+return {
+platformIdx: index('platform_idx').on(table.platform),
+postedAtIdx: index('posted_at_idx').on(table.postedAt),
+};
+});
+
+// Analytics events table
+export const analyticsEvents = pgTable('analytics_events', {
+id: serial('id').primaryKey(),
+eventType: text('event_type').notNull(), // 'signup', 'referral', 'premium_purchase', 'email_open', etc.
+email: text('email'),
+metadata: text('metadata'), // JSON string
+source: text('source'), // UTM source
+createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => {
+return {
+eventTypeIdx: index('event_type_idx').on(table.eventType),
+createdAtIdx: index('analytics_created_at_idx').on(table.createdAt),
+};
+});
+
+```
+
+═══════════════════════════════════════════════════════════════════════════
+ENVIRONMENT VARIABLES
+═══════════════════════════════════════════════════════════════════════════
+
+FILE: .env.production
+
+```
+
+
+# Domain Configuration
+
+VITE_APP_URL=https://youandinotai.com
+VITE_APP_TITLE=YouAndINotAI
+VITE_APP_LOGO=https://youandinotai.com/logo.png
+VITE_APP_DESCRIPTION=Real Connections, Not AI Bots
+
+# Server
+
+NODE_ENV=production
+PORT=3000
+API_URL=https://youandinotai.com
+
+# Database (PostgreSQL)
+
+DATABASE_URL=postgresql://username:password@localhost:5432/youandinotai_prod
+DATABASE_POOL_MIN=2
+DATABASE_POOL_MAX=10
+
+# Stripe (Production Keys)
+
+STRIPE_SECRET_KEY=sk_live_xxxxx
+STRIPE_PUBLIC_KEY=pk_live_xxxxx
+STRIPE_WEBHOOK_SECRET=whsec_xxxxx
+STRIPE_PRICE_ID_PREMIUM=price_xxxxx
+STRIPE_SUCCESS_URL=https://youandinotai.com/success
+STRIPE_CANCEL_URL=https://youandinotai.com
+
+# Twitter API v2 (Elevated Access Required)
+
+TWITTER_API_KEY=xxxxx
+TWITTER_API_SECRET=xxxxx
+TWITTER_ACCESS_TOKEN=xxxxx
+TWITTER_ACCESS_TOKEN_SECRET=xxxxx
+TWITTER_BEARER_TOKEN=xxxxx
+TWITTER_CLIENT_ID=xxxxx
+TWITTER_CLIENT_SECRET=xxxxx
+TWITTER_HANDLE=@youandinotai
+
+# Reddit API
+
+REDDIT_CLIENT_ID=xxxxx
+REDDIT_CLIENT_SECRET=xxxxx
+REDDIT_USERNAME=youandinotai_bot
+REDDIT_PASSWORD=xxxxx
+REDDIT_USER_AGENT=YouAndINotAI-Bot/1.0.0 (by /u/youandinotai_bot)
+
+# Email Service (Resend - Preferred)
+
+EMAIL_SERVICE=resend
+RESEND_API_KEY=re_xxxxx
+EMAIL_FROM_ADDRESS=hello@youandinotai.com
+EMAIL_FROM_NAME=YouAndINotAI Team
+EMAIL_REPLY_TO=support@youandinotai.com
+
+# OR SendGrid (Alternative)
+
+# EMAIL_SERVICE=sendgrid
+
+# SENDGRID_API_KEY=SG.xxxxx
+
+# CORS
+
+CORS_ORIGIN=https://youandinotai.com,https://youandinotai.online
+
+# Analytics
+
+GOOGLE_ANALYTICS_ID=G-xxxxx
+MIXPANEL_TOKEN=xxxxx
+
+# Automation Settings
+
+AUTOMATION_ENABLED=true
+TWITTER_POST_TIMES=09:00,14:00,20:00
+REDDIT_POST_DAYS=monday,wednesday,friday
+EMAIL_SEND_TIME=10:00
+
+# Security
+
+JWT_SECRET=your_super_secret_jwt_key_here
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+
+# Monitoring
+
+LOG_LEVEL=info
+SENTRY_DSN=https://xxxxx@sentry.io/xxxxx
+
+# Backup
+
+BACKUP_ENABLED=true
+BACKUP_SCHEDULE=0 2 * * *
+BACKUP_RETENTION_DAYS=30
+
+```
+
+FILE: .env.local (Development)
+
+```
+
+
+# Domain Configuration
+
+VITE_APP_URL=http://localhost:5173
+VITE_APP_TITLE=YouAndINotAI (Dev)
+VITE_APP_LOGO=http://localhost:5173/logo.png
+
+# Server
+
+NODE_ENV=development
+PORT=3000
+API_URL=http://localhost:3000
+
+# Database (Local PostgreSQL or Supabase)
+
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/youandinotai_dev
+
+# Stripe (Test Keys)
+
+STRIPE_SECRET_KEY=sk_test_xxxxx
+STRIPE_PUBLIC_KEY=pk_test_xxxxx
+STRIPE_WEBHOOK_SECRET=whsec_test_xxxxx
+STRIPE_PRICE_ID_PREMIUM=price_test_xxxxx
+STRIPE_SUCCESS_URL=http://localhost:5173/success
+STRIPE_CANCEL_URL=http://localhost:5173
+
+# Twitter API (Test Account)
+
+TWITTER_API_KEY=xxxxx
+TWITTER_API_SECRET=xxxxx
+TWITTER_ACCESS_TOKEN=xxxxx
+TWITTER_ACCESS_TOKEN_SECRET=xxxxx
+TWITTER_BEARER_TOKEN=xxxxx
+TWITTER_CLIENT_ID=xxxxx
+TWITTER_CLIENT_SECRET=xxxxx
+
+# Reddit API (Test Account)
+
+REDDIT_CLIENT_ID=xxxxx
+REDDIT_CLIENT_SECRET=xxxxx
+REDDIT_USERNAME=test_bot
+REDDIT_PASSWORD=xxxxx
+REDDIT_USER_AGENT=YouAndINotAI-TestBot/1.0.0
+
+# Email Service (Test Mode)
+
+EMAIL_SERVICE=resend
+RESEND_API_KEY=re_xxxxx
+EMAIL_FROM_ADDRESS=dev@youandinotai.com
+EMAIL_FROM_NAME=YouAndINotAI Dev
+
+# CORS
+
+CORS_ORIGIN=http://localhost:5173
+
+# Automation (Disabled in Dev)
+
+AUTOMATION_ENABLED=false
+
+# Security
+
+JWT_SECRET=dev_secret_key
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=1000
+
+# Monitoring
+
+LOG_LEVEL=debug
+
+```
+
